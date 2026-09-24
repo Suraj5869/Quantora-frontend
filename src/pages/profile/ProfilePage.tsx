@@ -26,6 +26,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useProfile, useUpdateProfile } from "../../features/profile/hooks/useProfile";
 import { useAuthStore } from "../../store/auth.store";
 import { toast } from "react-hot-toast";
+import { useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import BrokerConnectionCard from "./components/BrokerConnectionCard";
+import { BROKER_CONNECTION_QUERY_KEY } from "../../features/broker/hooks/useBroker";
 
 const profileSchema = z.object({
   fullName: z
@@ -39,6 +43,8 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
   const authUser = useAuthStore((state) => state.user);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
 
   const {
     data: profile,
@@ -63,6 +69,33 @@ export default function ProfilePage() {
       fullName: "",
     },
   });
+
+  useEffect(() => {
+    const broker = searchParams.get("broker");
+    const status = searchParams.get("status");
+    const reason = searchParams.get("reason");
+
+    if (broker !== "upstox" || !status) {
+      return;
+    }
+
+    if (status === "connected") {
+      toast.success("Upstox connected successfully.");
+      queryClient.invalidateQueries({
+        queryKey: BROKER_CONNECTION_QUERY_KEY,
+      });
+    } else {
+      toast.error(
+        reason || "Unable to connect Upstox. Please try again.",
+      );
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("broker");
+    nextParams.delete("status");
+    nextParams.delete("reason");
+    setSearchParams(nextParams, { replace: true });
+  }, [queryClient, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (profile) {
@@ -497,6 +530,8 @@ export default function ProfilePage() {
           </Stack>
         </Box>
       </Card>
+
+      <BrokerConnectionCard />
 
       {/* Trading preferences */}
       <Card
