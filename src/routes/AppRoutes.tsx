@@ -10,6 +10,7 @@ import MarketsPage from "../pages/markets/MarketsPage";
 import ScannerPage from "../pages/scanner/ScannerPage";
 import BrokersPage from "../pages/brokers/BrokersPage";
 import PaperTradingPage from "../pages/paper-trading/PaperTradingPage";
+import BacktestingPage from "../pages/backtesting/BacktestingPage";
 
 export default function AppRoutes() {
   return (
@@ -25,6 +26,7 @@ export default function AppRoutes() {
             <Route path="/portfolio" element={<PagePlaceholder title="Portfolio" />} />
             <Route path="/watchlist" element={<PagePlaceholder title="Watchlist" />} />
             <Route path="/strategies" element={<PagePlaceholder title="Strategies" />} />
+            <Route path="/backtesting" element={<BacktestingPage />} />
             <Route path="/ai-insights" element={<PagePlaceholder title="AI Insights" />} />
             <Route path="/paper-trading" element={<PaperTradingPage />} />
             <Route path="/markets" element={<MarketsPage />} />
