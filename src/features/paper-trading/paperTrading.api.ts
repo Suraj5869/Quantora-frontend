@@ -3,7 +3,7 @@ import type { MarketInstrument } from "../market-data/types/marketData.types";
 
 export interface PaperPosition {
   instrumentKey: string; tradingSymbol: string; quantity: number; averagePrice: number;
-  lastPrice: number; marketValue: number; unrealizedPnl: number;
+  lastPrice: number; stopLossPrice: number | null; marketValue: number; unrealizedPnl: number;
 }
 export interface PaperOrder {
   id: string; instrumentKey: string; tradingSymbol: string; side: string; quantity: number;
@@ -17,7 +17,7 @@ export interface PaperAccount {
 export async function getPaperAccount() {
   return (await apiClient.get<PaperAccount>("/paper-trading/account")).data;
 }
-export async function placePaperOrder(request: { instrumentKey: string; tradingSymbol: string; side: "BUY" | "SELL"; quantity: number }) {
+export async function placePaperOrder(request: { instrumentKey: string; tradingSymbol: string; side: "BUY" | "SELL"; quantity: number; stopLossPrice?: number | null }) {
   return (await apiClient.post<PaperOrder>("/paper-trading/orders", request)).data;
 }
 export async function resetPaperAccount() {
