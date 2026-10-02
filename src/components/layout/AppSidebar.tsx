@@ -10,6 +10,7 @@ import {
   SettingsOutlined,
   ShowChartOutlined,
   RadarOutlined,
+  ScienceOutlined,
   StarBorderOutlined,
 } from "@mui/icons-material";
 import {
@@ -75,6 +76,11 @@ const tradingItems = [
     label: "Paper Trading",
     path: "/paper-trading",
     icon: <ShowChartOutlined />,
+  },
+  {
+    label: "Backtesting",
+    path: "/backtesting",
+    icon: <ScienceOutlined />,
   },
 ];
 
