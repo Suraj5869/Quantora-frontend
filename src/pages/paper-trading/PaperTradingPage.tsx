@@ -23,6 +23,7 @@ export default function PaperTradingPage() {
   const [query, setQuery] = useState("");
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
   const [quantity, setQuantity] = useState("1");
+  const [stopLossPrice, setStopLossPrice] = useState("");
   const [loading, setLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState("");
@@ -51,6 +52,7 @@ export default function PaperTradingPage() {
       const response = await apiClient.get<RiskPreview>("/paper-trading/risk/preview", { params: { instrumentKey: instrument.instrumentKey, riskPercent: 1 } });
       setRiskPreview(response.data);
       setQuantity(String(response.data.suggestedQuantity));
+      setStopLossPrice(String(response.data.stopPrice));
     } catch (e: any) { setRiskError(e?.response?.data?.message ?? e?.response?.data?.title ?? "Unable to calculate risk preview. Confirm market data is available."); }
     finally { setRiskLoading(false); }
   };
@@ -61,7 +63,7 @@ export default function PaperTradingPage() {
     if (!Number.isFinite(qty) || qty <= 0) { setError("Enter a valid quantity greater than zero."); return; }
     setPlacing(true); setError(""); setMessage("");
     try {
-      const order = await placePaperOrder({ instrumentKey: instrument.instrumentKey, tradingSymbol: instrument.tradingSymbol, side, quantity: qty });
+      const order = await placePaperOrder({ instrumentKey: instrument.instrumentKey, tradingSymbol: instrument.tradingSymbol, side, quantity: qty, stopLossPrice: side === "BUY" ? Number(stopLossPrice) : null });
       if (order.status === "REJECTED") setError(order.rejectionReason ?? "Order rejected.");
       else setMessage(`${side} ${qty} ${instrument.tradingSymbol} filled at ${money(order.executionPrice ?? 0)}. No real broker order was sent.`);
       setRiskPreview(null);
@@ -93,12 +95,13 @@ export default function PaperTradingPage() {
     </Box>
     <Card variant="outlined" sx={{ mb: 2 }}><CardContent>
       <Typography variant="h6" fontWeight={750} sx={{ mb: 2 }}>Place simulated market order</Typography>
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "minmax(240px,2fr) 130px 140px auto" }, gap: 1.5, alignItems: "start" }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "minmax(240px,2fr) 130px 120px 150px auto" }, gap: 1.5, alignItems: "start" }}>
         <Autocomplete options={options} value={instrument} inputValue={query} onInputChange={(_, value) => setQuery(value)} onChange={(_, value) => setInstrument(value)}
           getOptionLabel={o => `${o.tradingSymbol} — ${o.name}`} isOptionEqualToValue={(a,b) => a.instrumentKey === b.instrumentKey}
           filterOptions={x => x} renderInput={params => <TextField {...params} label="Search stock" placeholder="e.g. INFY, RELIANCE" helperText={instrument ? instrument.instrumentKey : "Select a result to trade"} />} />
         <TextField select label="Side" value={side} onChange={e => setSide(e.target.value as "BUY" | "SELL")}><MenuItem value="BUY">Buy</MenuItem><MenuItem value="SELL">Sell</MenuItem></TextField>
-        <TextField label="Quantity" type="number" value={quantity} onChange={e => setQuantity(e.target.value)} inputProps={{ min: .0001, step: 1 }} />
+        <TextField label="Quantity" type="number" value={quantity} onChange={e => setQuantity(e.target.value)} inputProps={{ min: 1, step: 1 }} />
+        {side === "BUY" && <TextField label="Stop-loss price (₹)" type="number" value={stopLossPrice} onChange={e => setStopLossPrice(e.target.value)} inputProps={{ min: 0.01, step: 0.05 }} helperText="Required; maximum planned risk is 1% of equity." />}
         <Button variant="contained" color={side === "BUY" ? "primary" : "error"} onClick={() => void submitOrder()} disabled={placing || !instrument} sx={{ minHeight: 56 }}>{placing ? <CircularProgress size={22} color="inherit" /> : `Place ${side}`}</Button>
       </Box>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 1.5 }} alignItems={{ xs: "stretch", sm: "center" }}>
@@ -124,7 +127,7 @@ export default function PaperTradingPage() {
     </CardContent></Card>
     <Card variant="outlined" sx={{ mb: 2 }}><CardContent sx={{ pb: "12px !important" }}><Stack direction="row" alignItems="center" spacing={1}><TrendingUpOutlined color="primary" /><Typography variant="h6" fontWeight={750}>Open positions</Typography></Stack></CardContent>
       {(account?.positions.length ?? 0) === 0 ? <Box sx={{ p: 4, textAlign: "center" }}><Typography color="text.secondary">No open positions yet. Place a simulated buy order to get started.</Typography></Box> :
-      <TableContainer sx={{ overflowX: "auto" }}><Table size="small"><TableHead><TableRow>{["Stock","Quantity","Average price","Last price","Market value","Unrealized P&L"].map(x=><TableCell key={x} sx={{ whiteSpace:"nowrap",fontWeight:700 }}>{x}</TableCell>)}</TableRow></TableHead><TableBody>{account!.positions.map(p=><TableRow key={p.instrumentKey}><TableCell><Typography fontWeight={700}>{p.tradingSymbol}</Typography><Typography variant="caption" color="text.secondary">{p.instrumentKey}</Typography></TableCell><TableCell>{p.quantity}</TableCell><TableCell>{money(p.averagePrice)}</TableCell><TableCell>{money(p.lastPrice)}</TableCell><TableCell>{money(p.marketValue)}</TableCell><TableCell><Typography color={p.unrealizedPnl >= 0 ? "success.main" : "error.main"} fontWeight={700}>{money(p.unrealizedPnl)}</Typography></TableCell></TableRow>)}</TableBody></Table></TableContainer>}
+      <TableContainer sx={{ overflowX: "auto" }}><Table size="small"><TableHead><TableRow>{["Stock","Quantity","Average price","Last price","Stop loss","Market value","Unrealized P&L"].map(x=><TableCell key={x} sx={{ whiteSpace:"nowrap",fontWeight:700 }}>{x}</TableCell>)}</TableRow></TableHead><TableBody>{account!.positions.map(p=><TableRow key={p.instrumentKey}><TableCell><Typography fontWeight={700}>{p.tradingSymbol}</Typography><Typography variant="caption" color="text.secondary">{p.instrumentKey}</Typography></TableCell><TableCell>{p.quantity}</TableCell><TableCell>{money(p.averagePrice)}</TableCell><TableCell>{money(p.lastPrice)}</TableCell><TableCell>{p.stopLossPrice == null ? "—" : money(p.stopLossPrice)}</TableCell><TableCell>{money(p.marketValue)}</TableCell><TableCell><Typography color={p.unrealizedPnl >= 0 ? "success.main" : "error.main"} fontWeight={700}>{money(p.unrealizedPnl)}</Typography></TableCell></TableRow>)}</TableBody></Table></TableContainer>}
     </Card>
     <Card variant="outlined"><CardContent sx={{ pb: "12px !important" }}><Typography variant="h6" fontWeight={750}>Order history</Typography></CardContent>
       {(account?.recentOrders.length ?? 0) === 0 ? <Box sx={{ p: 4, textAlign: "center" }}><Typography color="text.secondary">No paper orders recorded.</Typography></Box> :
