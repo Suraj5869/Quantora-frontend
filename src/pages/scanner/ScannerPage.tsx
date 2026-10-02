@@ -6,64 +6,63 @@ import {
 } from "@mui/material";
 import RadarOutlined from "@mui/icons-material/RadarOutlined";
 import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
-import { getMarketDiscovery, getTechnicalAnalysis } from "../../features/market-data/api/marketData.api";
-import type { MarketMover, TechnicalAnalysisResponse } from "../../features/market-data/types/marketData.types";
+import apiClient from "../../api/axios";
 
-type ScanRow = { stock: MarketMover; analysis: TechnicalAnalysisResponse | null; error?: string };
-type FilterMode = "all" | "bullish" | "bearish" | "oversold" | "overbought" | "positive-momentum";
-const dateString = (date: Date) => date.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+type StrategyScanItem = {
+  name: string;
+  tradingSymbol: string;
+  instrumentKey: string;
+  lastClose: number | null;
+  dailyChangePercent: number | null;
+  rsi14: number | null;
+  setup: string;
+  note: string;
+  candleCount: number;
+};
+type StrategyScanResponse = {
+  scannedAt: string;
+  universeSize: number;
+  successfulResults: number;
+  results: StrategyScanItem[];
+  scopeAndDisclaimer: string;
+};
+type FilterMode = "all" | "bullish" | "bearish" | "mixed" | "unavailable";
 const money = (v: number | null) => v == null ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(v);
 const val = (v: number | null, digits = 2) => v == null ? "—" : v.toFixed(digits);
 
 export default function ScannerPage() {
-  const [rows, setRows] = useState<ScanRow[]>([]);
+  const [result, setResult] = useState<StrategyScanResponse | null>(null);
   const [filter, setFilter] = useState<FilterMode>("all");
   const [scanning, setScanning] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+
   const runScan = async () => {
-    setScanning(true); setProgress(0); setError(""); setRows([]);
+    setScanning(true);
+    setError("");
     try {
-      const discovery = await getMarketDiscovery();
-      const universe = discovery.featuredStocks;
-      const end = new Date();
-      const start = new Date(Date.now() - 120 * 86400000);
-      const results: ScanRow[] = [];
-      // Small batches help avoid overwhelming the broker's market-data API.
-      for (let i = 0; i < universe.length; i += 3) {
-        const batch = universe.slice(i, i + 3);
-        const batchResults = await Promise.all(batch.map(async (stock): Promise<ScanRow> => {
-          try {
-            const analysis = await getTechnicalAnalysis({
-              instrumentKey: stock.instrumentKey, unit: "days", interval: 1, intraday: false,
-              fromDate: dateString(start), toDate: dateString(end),
-            });
-            return { stock, analysis };
-          } catch {
-            return { stock, analysis: null, error: "Analysis unavailable" };
-          }
-        }));
-        results.push(...batchResults);
-        setRows([...results]);
-        setProgress(Math.min(100, Math.round(results.length / universe.length * 100)));
-      }
-      if (results.every(r => !r.analysis)) setError("No indicators could be calculated. Confirm your Upstox connection and try again.");
-    } catch {
-      setError("Unable to load the scanner universe. Confirm your Upstox connection and try again.");
-    } finally { setScanning(false); }
+      const response = await apiClient.get<StrategyScanResponse>("/strategy-scanner/scan");
+      setResult(response.data);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string; title?: string } } };
+      setError(err.response?.data?.message ?? err.response?.data?.title ??
+        "Unable to scan stocks. Confirm your Upstox connection and try again.");
+    } finally {
+      setScanning(false);
+    }
   };
-  const visibleRows = rows.filter(({ analysis }) => {
-    if (!analysis) return filter === "all";
+
+  const rows = (result?.results ?? []).filter(row => {
     switch (filter) {
-      case "bullish": return analysis.trend === "Bullish";
-      case "bearish": return analysis.trend === "Bearish";
-      case "oversold": return analysis.rsi14 != null && analysis.rsi14 <= 30;
-      case "overbought": return analysis.rsi14 != null && analysis.rsi14 >= 70;
-      case "positive-momentum": return analysis.momentum === "Positive";
+      case "bullish": return row.setup === "Bullish setup";
+      case "bearish": return row.setup === "Bearish setup";
+      case "mixed": return row.setup === "Mixed signals";
+      case "unavailable": return row.setup === "Unavailable" || row.setup === "Insufficient data";
       default: return true;
     }
   });
-  const successful = rows.filter(r => r.analysis);
+  const allRows = result?.results ?? [];
+  const count = (setup: string) => allRows.filter(row => row.setup === setup).length;
+
   return <Box sx={{ maxWidth: 1500, mx: "auto" }}>
     <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} spacing={2} sx={{ mb: 3 }}>
       <Box>
@@ -71,42 +70,61 @@ export default function ScannerPage() {
           <RadarOutlined color="primary" />
           <Typography variant="h4" fontWeight={800}>Stock Scanner</Typography>
         </Stack>
-        <Typography color="text.secondary" sx={{ mt: 0.5 }}>Screen the featured NSE universe using daily technical indicators.</Typography>
+        <Typography color="text.secondary" sx={{ mt: 0.5 }}>Find technical setups from historical daily market data.</Typography>
       </Box>
-      <Button variant="contained" startIcon={scanning ? <CircularProgress size={18} color="inherit" /> : <RefreshOutlined />} disabled={scanning} onClick={() => void runScan()}>{scanning ? `Scanning ${progress}%` : rows.length ? "Run scan again" : "Run scanner"}</Button>
+      <Button variant="contained" startIcon={scanning ? <CircularProgress size={18} color="inherit" /> : <RefreshOutlined />} disabled={scanning} onClick={() => void runScan()}>
+        {scanning ? "Scanning universe…" : result ? "Run scan again" : "Run scanner"}
+      </Button>
     </Stack>
-    <Alert severity="info" sx={{ mb: 2 }}>This first scanner checks the 20 featured stocks already configured in Quantora. It uses daily candles and historical indicators; results are screening signals, not buy/sell recommendations.</Alert>
-    {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+    <Alert severity="info" sx={{ mb: 2 }}>
+      {result?.scopeAndDisclaimer ?? "The scan uses the currently configured featured-stock universe. Results are informational screening signals, not buy/sell recommendations. No orders are placed."}
+    </Alert>
+    {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>{error}</Alert>}
+
     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))" }, gap: 1.5, mb: 2 }}>
-      <Summary title="Stocks scanned" value={String(successful.length)} />
-      <Summary title="Bullish trend" value={String(successful.filter(r => r.analysis?.trend === "Bullish").length)} />
-      <Summary title="Oversold (RSI ≤ 30)" value={String(successful.filter(r => r.analysis?.rsi14 != null && r.analysis.rsi14 <= 30).length)} />
-      <Summary title="Positive momentum" value={String(successful.filter(r => r.analysis?.momentum === "Positive").length)} />
+      <Summary title="Universe size" value={String(result?.universeSize ?? "—")} />
+      <Summary title="Bullish setups" value={String(count("Bullish setup"))} />
+      <Summary title="Bearish setups" value={String(count("Bearish setup"))} />
+      <Summary title="Unavailable / insufficient" value={String(count("Unavailable") + count("Insufficient data"))} />
     </Box>
+
     <Card variant="outlined">
       <CardContent sx={{ pb: "12px !important" }}>
         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} spacing={1}>
-          <Typography variant="h6" fontWeight={750}>Scan results</Typography>
-          <TextField select size="small" label="Filter results" value={filter} onChange={e => setFilter(e.target.value as FilterMode)} sx={{ minWidth: 210 }}>
-            <MenuItem value="all">All scanned stocks</MenuItem><MenuItem value="bullish">Bullish trend</MenuItem>
-            <MenuItem value="bearish">Bearish trend</MenuItem><MenuItem value="oversold">RSI oversold (≤ 30)</MenuItem>
-            <MenuItem value="overbought">RSI overbought (≥ 70)</MenuItem><MenuItem value="positive-momentum">Positive momentum</MenuItem>
+          <Box>
+            <Typography variant="h6" fontWeight={750}>Strategy scan results</Typography>
+            {result && <Typography variant="caption" color="text.secondary">
+              Scanned {new Date(result.scannedAt).toLocaleString("en-IN")} · {result.successfulResults} of {result.universeSize} instruments returned data
+            </Typography>}
+          </Box>
+          <TextField select size="small" label="Filter results" value={filter} onChange={e => setFilter(e.target.value as FilterMode)} sx={{ minWidth: 220 }}>
+            <MenuItem value="all">All results</MenuItem>
+            <MenuItem value="bullish">Bullish setups</MenuItem>
+            <MenuItem value="bearish">Bearish setups</MenuItem>
+            <MenuItem value="mixed">Mixed signals</MenuItem>
+            <MenuItem value="unavailable">Unavailable / insufficient data</MenuItem>
           </TextField>
         </Stack>
       </CardContent>
-      {rows.length === 0 && !scanning ? <Box sx={{ p: 5, textAlign: "center" }}><RadarOutlined sx={{ fontSize: 42, color: "text.secondary", mb: 1 }} /><Typography fontWeight={650}>Ready to scan</Typography><Typography color="text.secondary" variant="body2">Run the scanner to calculate daily indicators for featured stocks.</Typography></Box> :
+      {!result && !scanning ? <Box sx={{ p: 5, textAlign: "center" }}>
+        <RadarOutlined sx={{ fontSize: 42, color: "text.secondary", mb: 1 }} />
+        <Typography fontWeight={650}>Ready to scan</Typography>
+        <Typography color="text.secondary" variant="body2">Run the scanner to analyze the configured universe.</Typography>
+      </Box> : scanning && !result ? <Box sx={{ p: 5, textAlign: "center" }}><CircularProgress /><Typography sx={{ mt: 2 }} color="text.secondary">Fetching historical candles and calculating indicators. This can take a little while.</Typography></Box> :
       <TableContainer sx={{ overflowX: "auto" }}><Table size="small">
-        <TableHead><TableRow>{["Stock","Last price","Trend","RSI (14)","MACD","SMA 20","Momentum","Volatility"].map(h => <TableCell key={h} sx={{ whiteSpace: "nowrap", fontWeight: 700 }}>{h}</TableCell>)}</TableRow></TableHead>
-        <TableBody>{visibleRows.map(({ stock, analysis, error: rowError }) => <TableRow key={stock.instrumentKey} hover>
-          <TableCell sx={{ minWidth: 170 }}><Typography fontWeight={700}>{stock.tradingSymbol}</Typography><Typography variant="caption" color="text.secondary">{stock.name}</Typography></TableCell>
-          <TableCell>{money(stock.lastPrice)}</TableCell>
-          <TableCell>{analysis ? <Chip size="small" label={analysis.trend} color={analysis.trend === "Bullish" ? "success" : analysis.trend === "Bearish" ? "error" : "default"} /> : <Typography variant="body2" color="text.secondary">{rowError ?? "Waiting…"}</Typography>}</TableCell>
-          <TableCell>{val(analysis?.rsi14 ?? null)}{analysis?.rsi14 != null && (analysis.rsi14 <= 30 || analysis.rsi14 >= 70) ? <Chip size="small" sx={{ ml: 0.5 }} label={analysis.rsi14 <= 30 ? "Oversold" : "Overbought"} /> : null}</TableCell>
-          <TableCell>{val(analysis?.macd ?? null, 3)}</TableCell><TableCell>{money(analysis?.sma20 ?? null)}</TableCell>
-          <TableCell>{analysis?.momentum ?? "—"}</TableCell><TableCell>{analysis?.volatility ?? "—"}</TableCell>
+        <TableHead><TableRow>{["Stock","Last close","Daily change","Setup","RSI (14)","Candles","Notes"].map(h => <TableCell key={h} sx={{ whiteSpace: "nowrap", fontWeight: 700 }}>{h}</TableCell>)}</TableRow></TableHead>
+        <TableBody>{rows.map(row => <TableRow key={row.instrumentKey} hover>
+          <TableCell sx={{ minWidth: 155 }}><Typography fontWeight={700}>{row.tradingSymbol}</Typography><Typography variant="caption" color="text.secondary">{row.name}</Typography></TableCell>
+          <TableCell>{money(row.lastClose)}</TableCell>
+          <TableCell sx={{ whiteSpace: "nowrap", color: row.dailyChangePercent == null ? "text.secondary" : row.dailyChangePercent > 0 ? "success.main" : row.dailyChangePercent < 0 ? "error.main" : "text.primary" }}>{row.dailyChangePercent == null ? "—" : `${row.dailyChangePercent > 0 ? "+" : ""}${val(row.dailyChangePercent)}%`}</TableCell>
+          <TableCell><Chip size="small" label={row.setup} color={row.setup === "Bullish setup" ? "success" : row.setup === "Bearish setup" ? "error" : row.setup === "Unavailable" ? "warning" : "default"} /></TableCell>
+          <TableCell>{val(row.rsi14)}</TableCell>
+          <TableCell>{row.candleCount || "—"}</TableCell>
+          <TableCell sx={{ minWidth: 280, maxWidth: 480, whiteSpace: "normal" }}><Typography variant="body2" color="text.secondary">{row.note}</Typography></TableCell>
         </TableRow>)}</TableBody>
       </Table></TableContainer>}
-      {scanning && <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">Processed {rows.length} stocks so far. Some instruments may not return enough daily candles to calculate every indicator.</Typography></Box>}
+      {result && rows.length === 0 && <Box sx={{ p: 3, textAlign: "center" }}><Typography color="text.secondary">No stocks match this filter.</Typography></Box>}
     </Card>
   </Box>;
 }
