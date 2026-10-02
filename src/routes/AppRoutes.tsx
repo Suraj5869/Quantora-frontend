@@ -26,6 +26,7 @@ export default function AppRoutes() {
             <Route path="/ai-insights" element={<PagePlaceholder title="AI Insights" />} />
             <Route path="/paper-trading" element={<PagePlaceholder title="Paper Trading" />} />
             <Route path="/markets" element={<MarketsPage />} />
+            <Route path="/brokers" element={<BrokersPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<PagePlaceholder title="Settings" />} />
           </Route>
