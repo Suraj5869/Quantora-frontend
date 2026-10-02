@@ -10,8 +10,8 @@ import TrendingUpOutlined from "@mui/icons-material/TrendingUpOutlined";
 import TrendingDownOutlined from "@mui/icons-material/TrendingDownOutlined";
 import ShowChartOutlined from "@mui/icons-material/ShowChartOutlined";
 import CloseOutlined from "@mui/icons-material/CloseOutlined";
-import { getHistoricalCandles, getIntradayCandles, getMarketDiscovery, searchStocks } from "../../features/market-data/api/marketData.api";
-import type { MarketCandle, MarketCandlesResponse, MarketDiscoveryResponse, MarketInstrument, MarketMover } from "../../features/market-data/types/marketData.types";
+import { getHistoricalCandles, getIntradayCandles, getMarketDiscovery, getTechnicalAnalysis, searchStocks } from "../../features/market-data/api/marketData.api";
+import type { MarketCandle, MarketCandlesResponse, MarketDiscoveryResponse, MarketInstrument, MarketMover, TechnicalAnalysisResponse } from "../../features/market-data/types/marketData.types";
 
 type DataMode = "intraday" | "historical";
 const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -43,6 +43,7 @@ export default function MarketsPage() {
   const [candles, setCandles] = useState<MarketCandlesResponse | null>(null);
   const [loadingCandles, setLoadingCandles] = useState(false);
   const [candleError, setCandleError] = useState("");
+  const [analysis, setAnalysis] = useState<TechnicalAnalysisResponse | null>(null);
 
   const refresh = useCallback(async () => {
     setLoadingDiscovery(true); setPageError("");
@@ -68,12 +69,22 @@ export default function MarketsPage() {
 
   const loadCandles = async (stock: MarketInstrument | MarketMover, nextMode = mode, nextUnit = unit, nextInterval = interval, from = fromDate, to = toDate) => {
     if (nextMode === "historical" && from > to) { setCandleError("Start date must be on or before end date."); return; }
-    setLoadingCandles(true); setCandleError("");
+    setLoadingCandles(true); setCandleError(""); setAnalysis(null);
     try {
       const data = nextMode === "intraday"
         ? await getIntradayCandles({ instrumentKey: stock.instrumentKey, unit: nextUnit, interval: nextInterval })
         : await getHistoricalCandles({ instrumentKey: stock.instrumentKey, unit: nextUnit, interval: nextInterval, fromDate: from, toDate: to });
       setCandles(data);
+      try {
+        const indicators = await getTechnicalAnalysis({
+          instrumentKey: stock.instrumentKey, unit: nextUnit, interval: nextInterval,
+          intraday: nextMode === "intraday",
+          ...(nextMode === "historical" ? { fromDate: from, toDate: to } : {}),
+        });
+        setAnalysis(indicators);
+      } catch {
+        setAnalysis(null);
+      }
     } catch (error) { setCandleError(getError(error)); }
     finally { setLoadingCandles(false); }
   };
@@ -199,6 +210,21 @@ export default function MarketsPage() {
               <MetricCard label="Period low" value={price(Math.min(...candles.candles.map(c => c.low)))} />
               <MetricCard label="Latest volume" value={formatNumber(candles.candles[candles.candles.length - 1].volume)} />
             </Stack>
+            {analysis && <Box sx={{ mb: 2 }}>
+              <Typography variant="h6" fontWeight={750} sx={{ mb: 1 }}>Technical analysis</Typography>
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", sm: "repeat(4, minmax(0, 1fr))", xl: "repeat(7, minmax(0, 1fr))" }, gap: 1 }}>
+                <MetricCard label="Trend" value={analysis.trend} />
+                <MetricCard label="Momentum" value={analysis.momentum} />
+                <MetricCard label="RSI (14)" value={analysis.rsi14 == null ? "Need more data" : analysis.rsi14.toFixed(2)} />
+                <MetricCard label="SMA (20)" value={analysis.sma20 == null ? "Need more data" : price(analysis.sma20)} />
+                <MetricCard label="EMA (20)" value={analysis.ema20 == null ? "Need more data" : price(analysis.ema20)} />
+                <MetricCard label="MACD" value={analysis.macd == null ? "Need more data" : analysis.macd.toFixed(3)} />
+                <MetricCard label="Volatility" value={analysis.atrPercent == null ? "Need more data" : `${analysis.volatility} (${analysis.atrPercent.toFixed(2)}%)`} />
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+                Based on {analysis.candleCount} candles. Indicators describe historical data and are not trading recommendations.
+              </Typography>
+            </Box>}
             <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", backgroundColor: "background.paper" }}>
               <Stack direction="row" spacing={2} sx={{ px: 2, pt: 1.5, alignItems: "center", flexWrap: "wrap" }}>
                 <Typography variant="subtitle2" fontWeight={750}>Price chart</Typography>
