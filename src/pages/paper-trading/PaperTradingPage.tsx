@@ -7,11 +7,14 @@ import {
 import AccountBalanceWalletOutlined from "@mui/icons-material/AccountBalanceWalletOutlined";
 import RestartAltOutlined from "@mui/icons-material/RestartAltOutlined";
 import TrendingUpOutlined from "@mui/icons-material/TrendingUpOutlined";
+import ShieldOutlined from "@mui/icons-material/ShieldOutlined";
+import apiClient from "../../api/axios";
 import { getPaperAccount, placePaperOrder, resetPaperAccount, searchPaperInstruments, type PaperAccount } from "../../features/paper-trading/paperTrading.api";
 import type { MarketInstrument } from "../../features/market-data/types/marketData.types";
 
 const money = (v: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(v);
 const dateTime = (v: string) => new Date(v).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+type RiskPreview = { portfolioEquity: number; availableCash: number; riskPercent: number; riskBudget: number; referenceEntryPrice: number; atr14: number; stopPrice: number; stopDistance: number; suggestedQuantity: number; estimatedCost: number; plannedRiskAtStop: number; existingUnrealizedLossEstimate: number; disclaimer: string };
 
 export default function PaperTradingPage() {
   const [account, setAccount] = useState<PaperAccount | null>(null);
@@ -25,6 +28,9 @@ export default function PaperTradingPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [resetOpen, setResetOpen] = useState(false);
+  const [riskPreview, setRiskPreview] = useState<RiskPreview | null>(null);
+  const [riskLoading, setRiskLoading] = useState(false);
+  const [riskError, setRiskError] = useState("");
 
   const refresh = async () => { setLoading(true); try { setAccount(await getPaperAccount()); setError(""); } catch { setError("Unable to load paper account. Check the backend and database migration."); } finally { setLoading(false); } };
   useEffect(() => { void refresh(); }, []);
@@ -38,6 +44,17 @@ export default function PaperTradingPage() {
     return () => { active = false; window.clearTimeout(timer); };
   }, [query]);
 
+  const previewRisk = async () => {
+    if (!instrument) { setRiskError("Search and select a stock first."); return; }
+    setRiskLoading(true); setRiskError(""); setRiskPreview(null);
+    try {
+      const response = await apiClient.get<RiskPreview>("/paper-trading/risk/preview", { params: { instrumentKey: instrument.instrumentKey, riskPercent: 1 } });
+      setRiskPreview(response.data);
+      setQuantity(String(response.data.suggestedQuantity));
+    } catch (e: any) { setRiskError(e?.response?.data?.message ?? e?.response?.data?.title ?? "Unable to calculate risk preview. Confirm market data is available."); }
+    finally { setRiskLoading(false); }
+  };
+
   const submitOrder = async () => {
     if (!instrument) { setError("Search and select a stock first."); return; }
     const qty = Number(quantity);
@@ -47,6 +64,7 @@ export default function PaperTradingPage() {
       const order = await placePaperOrder({ instrumentKey: instrument.instrumentKey, tradingSymbol: instrument.tradingSymbol, side, quantity: qty });
       if (order.status === "REJECTED") setError(order.rejectionReason ?? "Order rejected.");
       else setMessage(`${side} ${qty} ${instrument.tradingSymbol} filled at ${money(order.executionPrice ?? 0)}. No real broker order was sent.`);
+      setRiskPreview(null);
       await refresh();
     } catch (e: any) { setError(e?.response?.data?.message ?? e?.response?.data?.title ?? "Order failed. Confirm Upstox market data is available."); }
     finally { setPlacing(false); }
@@ -83,6 +101,26 @@ export default function PaperTradingPage() {
         <TextField label="Quantity" type="number" value={quantity} onChange={e => setQuantity(e.target.value)} inputProps={{ min: .0001, step: 1 }} />
         <Button variant="contained" color={side === "BUY" ? "primary" : "error"} onClick={() => void submitOrder()} disabled={placing || !instrument} sx={{ minHeight: 56 }}>{placing ? <CircularProgress size={22} color="inherit" /> : `Place ${side}`}</Button>
       </Box>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 1.5 }} alignItems={{ xs: "stretch", sm: "center" }}>
+        <Button variant="outlined" startIcon={riskLoading ? <CircularProgress size={18} /> : <ShieldOutlined />} disabled={riskLoading || !instrument} onClick={() => void previewRisk()}>
+          {riskLoading ? "Calculating risk…" : "Preview 1% risk sizing"}
+        </Button>
+        <Typography variant="caption" color="text.secondary">Uses a 2× ATR stop and cash available; preview does not place an order.</Typography>
+      </Stack>
+      {riskError && <Alert severity="error" sx={{ mt: 2 }} onClose={() => setRiskError("")}>{riskError}</Alert>}
+      {riskPreview && <Box sx={{ mt: 2 }}>
+        <Alert severity="info" sx={{ mb: 1.5 }}>{riskPreview.disclaimer}</Alert>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2,minmax(0,1fr))", md: "repeat(4,minmax(0,1fr))" }, gap: 1.5 }}>
+          <Summary title="Risk budget (1%)" value={money(riskPreview.riskBudget)} />
+          <Summary title="Suggested quantity" value={String(riskPreview.suggestedQuantity)} />
+          <Summary title="Reference entry" value={money(riskPreview.referenceEntryPrice)} />
+          <Summary title="ATR stop price" value={money(riskPreview.stopPrice)} />
+          <Summary title="Estimated cost" value={money(riskPreview.estimatedCost)} />
+          <Summary title="Planned risk at stop" value={money(riskPreview.plannedRiskAtStop)} tone="warning.main" />
+          <Summary title="ATR (14)" value={money(riskPreview.atr14)} />
+          <Summary title="Available cash" value={money(riskPreview.availableCash)} />
+        </Box>
+      </Box>}
     </CardContent></Card>
     <Card variant="outlined" sx={{ mb: 2 }}><CardContent sx={{ pb: "12px !important" }}><Stack direction="row" alignItems="center" spacing={1}><TrendingUpOutlined color="primary" /><Typography variant="h6" fontWeight={750}>Open positions</Typography></Stack></CardContent>
       {(account?.positions.length ?? 0) === 0 ? <Box sx={{ p: 4, textAlign: "center" }}><Typography color="text.secondary">No open positions yet. Place a simulated buy order to get started.</Typography></Box> :
