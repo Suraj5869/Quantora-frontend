@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   Alert, Box, Button, Card, CardActionArea, Chip, CircularProgress, Divider,
-  InputAdornment, MenuItem, Stack, Tab, Tabs, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, TextField, Typography,
+  Dialog, DialogContent, DialogTitle, IconButton, InputAdornment, MenuItem,
+  Stack, Tab, Tabs, TextField, Typography,
 } from "@mui/material";
 import SearchOutlined from "@mui/icons-material/SearchOutlined";
 import RefreshOutlined from "@mui/icons-material/RefreshOutlined";
 import TrendingUpOutlined from "@mui/icons-material/TrendingUpOutlined";
 import TrendingDownOutlined from "@mui/icons-material/TrendingDownOutlined";
 import ShowChartOutlined from "@mui/icons-material/ShowChartOutlined";
+import CloseOutlined from "@mui/icons-material/CloseOutlined";
 import { getHistoricalCandles, getIntradayCandles, getMarketDiscovery, searchStocks } from "../../features/market-data/api/marketData.api";
-import type { MarketCandlesResponse, MarketDiscoveryResponse, MarketInstrument, MarketMover } from "../../features/market-data/types/marketData.types";
+import type { MarketCandle, MarketCandlesResponse, MarketDiscoveryResponse, MarketInstrument, MarketMover } from "../../features/market-data/types/marketData.types";
 
 type DataMode = "intraday" | "historical";
 const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -141,28 +142,135 @@ export default function MarketsPage() {
       <Typography variant="caption" color="text.secondary">Quotes fetched {formatTime(discovery.fetchedAt)}. Gainers and losers are ranked within the featured stock list, not the entire NSE.</Typography>
     </>}
 
-    {selected && <Card sx={{ mt: 3, p: { xs: 2, md: 3 }, border: "1px solid", borderColor: "divider", backgroundImage: "none" }}>
-      <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", md: "center" }} spacing={2} sx={{ mb: 2 }}>
-        <Box><Typography variant="h5" fontWeight={800}>{selected.name}</Typography><Typography color="text.secondary">{selected.tradingSymbol} · NSE Equity</Typography></Box>
-        <Stack direction="row" spacing={1} alignItems="center"><Tabs value={mode} onChange={(_, v: DataMode) => { setMode(v); void loadCandles(selected, v); }} aria-label="Candle range"><Tab label="Intraday" value="intraday" /><Tab label="Historical" value="historical" /></Tabs>
-          <Button variant="outlined" startIcon={<RefreshOutlined />} disabled={loadingCandles} onClick={() => void loadCandles(selected)}>Refresh</Button></Stack>
-      </Stack>
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ mb: 2 }}>
-        <TextField select size="small" label="Candle unit" value={unit} onChange={(e) => { setUnit(e.target.value); void loadCandles(selected, mode, e.target.value); }} sx={{ minWidth: 140 }}>
-          <MenuItem value="minutes">Minutes</MenuItem><MenuItem value="hours">Hours</MenuItem><MenuItem value="days">Days</MenuItem>
-        </TextField>
-        <TextField size="small" label="Interval" type="number" value={interval} onChange={(e) => setInterval(Number(e.target.value))} inputProps={{ min: 1 }} sx={{ width: 120 }} />
-        {mode === "historical" && <><TextField size="small" label="From" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} InputLabelProps={{ shrink: true }} /><TextField size="small" label="To" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} InputLabelProps={{ shrink: true }} /></>}
-        <Button variant="contained" disabled={loadingCandles} onClick={() => void loadCandles(selected)}>Load candles</Button>
-      </Stack>
-      {candleError && <Alert severity="error" sx={{ mb: 2 }}>{candleError}</Alert>}
-      {loadingCandles && <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}
-      {candles && !loadingCandles && (candles.candles.length === 0 ? <Alert severity="info">No candles available for this stock and date range.</Alert> :
-        <TableContainer sx={{ maxHeight: 480, border: "1px solid", borderColor: "divider", borderRadius: 2 }}><Table size="small" stickyHeader>
-          <TableHead><TableRow><TableCell>Time (IST)</TableCell><TableCell align="right">Open</TableCell><TableCell align="right">High</TableCell><TableCell align="right">Low</TableCell><TableCell align="right">Close</TableCell><TableCell align="right">Volume</TableCell></TableRow></TableHead>
-          <TableBody>{[...candles.candles].reverse().map((c) => <TableRow key={c.timestamp} hover><TableCell sx={{ whiteSpace: "nowrap" }}>{formatTime(c.timestamp)}</TableCell><TableCell align="right">{price(c.open)}</TableCell><TableCell align="right">{price(c.high)}</TableCell><TableCell align="right">{price(c.low)}</TableCell><TableCell align="right" sx={{ color: c.close >= c.open ? "success.main" : "error.main", fontWeight: 650 }}>{price(c.close)}</TableCell><TableCell align="right">{formatNumber(c.volume)}</TableCell></TableRow>)}</TableBody>
-        </Table></TableContainer>)}
-    </Card>}
+    <Dialog
+      open={Boolean(selected)}
+      onClose={() => setSelected(null)}
+      fullWidth
+      maxWidth="xl"
+      fullScreen={false}
+      PaperProps={{ sx: { borderRadius: { xs: 0, md: 3 }, backgroundImage: "none", minHeight: { md: "78vh" } } }}
+    >
+      {selected && <>
+        <DialogTitle sx={{ px: { xs: 2, md: 3 }, pt: 2.5, pb: 1 }}>
+          <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={2}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h5" fontWeight={800}>{selected.name}</Typography>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.75, flexWrap: "wrap" }}>
+                <Chip size="small" label={selected.tradingSymbol} />
+                <Typography variant="body2" color="text.secondary">NSE · {selected.instrumentKey}</Typography>
+              </Stack>
+            </Box>
+            <IconButton aria-label="Close stock details" onClick={() => setSelected(null)}><CloseOutlined /></IconButton>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ px: { xs: 1.5, md: 3 }, pb: 3 }}>
+          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", md: "center" }} spacing={2} sx={{ mb: 2 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Tabs value={mode} onChange={(_, v: DataMode) => { setMode(v); void loadCandles(selected, v); }} aria-label="Chart range">
+                <Tab label="Intraday" value="intraday" />
+                <Tab label="Historical" value="historical" />
+              </Tabs>
+              <Button variant="outlined" size="small" startIcon={<RefreshOutlined />} disabled={loadingCandles} onClick={() => void loadCandles(selected)}>Refresh</Button>
+            </Stack>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              <TextField select size="small" label="Candle unit" value={unit} onChange={(e) => { setUnit(e.target.value); void loadCandles(selected, mode, e.target.value); }} sx={{ minWidth: 130 }}>
+                <MenuItem value="minutes">Minutes</MenuItem><MenuItem value="hours">Hours</MenuItem><MenuItem value="days">Days</MenuItem>
+              </TextField>
+              <TextField size="small" label="Interval" type="number" value={interval} onChange={(e) => setInterval(Math.max(1, Number(e.target.value) || 1))} inputProps={{ min: 1 }} sx={{ width: 100 }} />
+              {mode === "historical" && <>
+                <TextField size="small" label="From" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} InputLabelProps={{ shrink: true }} />
+                <TextField size="small" label="To" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} InputLabelProps={{ shrink: true }} />
+              </>}
+              <Button variant="contained" disabled={loadingCandles} onClick={() => void loadCandles(selected)}>Apply</Button>
+            </Stack>
+          </Stack>
+          {candleError && <Alert severity="error" sx={{ mb: 2 }}>{candleError}</Alert>}
+          {loadingCandles && <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}><CircularProgress /></Box>}
+          {!loadingCandles && candles && candles.candles.length === 0 && <Alert severity="info">No chart data is available for this stock and date range.</Alert>}
+          {!loadingCandles && candles && candles.candles.length > 0 && <>
+            <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: "wrap", gap: 1 }}>
+              <MetricCard label="Latest close" value={price(candles.candles[candles.candles.length - 1].close)} />
+              <MetricCard label="Period high" value={price(Math.max(...candles.candles.map(c => c.high)))} />
+              <MetricCard label="Period low" value={price(Math.min(...candles.candles.map(c => c.low)))} />
+              <MetricCard label="Latest volume" value={formatNumber(candles.candles[candles.candles.length - 1].volume)} />
+            </Stack>
+            <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", backgroundColor: "background.paper" }}>
+              <Stack direction="row" spacing={2} sx={{ px: 2, pt: 1.5, alignItems: "center", flexWrap: "wrap" }}>
+                <Typography variant="subtitle2" fontWeight={750}>Price chart</Typography>
+                <Stack direction="row" spacing={0.75} alignItems="center"><Box sx={{ width: 9, height: 9, borderRadius: "50%", bgcolor: "#26a69a" }} /><Typography variant="caption" color="text.secondary">Bullish candle</Typography></Stack>
+                <Stack direction="row" spacing={0.75} alignItems="center"><Box sx={{ width: 9, height: 9, borderRadius: "50%", bgcolor: "#ef5350" }} /><Typography variant="caption" color="text.secondary">Bearish candle</Typography></Stack>
+              </Stack>
+              <CandlestickChart candles={candles.candles} />
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5 }}>
+              {candles.candles.length} candles · {candles.unit} interval: {candles.interval} · Updated {formatTime(candles.fetchedAt)} (IST)
+            </Typography>
+          </>}
+        </DialogContent>
+      </>}
+    </Dialog>
+  </Box>;
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return <Card variant="outlined" sx={{ flex: "1 1 145px", minWidth: 130, p: 1.5, backgroundImage: "none" }}>
+    <Typography variant="caption" color="text.secondary">{label}</Typography>
+    <Typography variant="subtitle1" fontWeight={800} sx={{ mt: 0.25 }}>{value}</Typography>
+  </Card>;
+}
+
+function CandlestickChart({ candles }: { candles: MarketCandle[] }) {
+  const visible = candles.slice(-90);
+  const width = 1000;
+  const height = 430;
+  const left = 76;
+  const right = 24;
+  const top = 24;
+  const priceBottom = 300;
+  const volumeTop = 328;
+  const volumeBottom = 382;
+  const plotWidth = width - left - right;
+  const lows = visible.map(c => c.low);
+  const highs = visible.map(c => c.high);
+  const min = Math.min(...lows);
+  const max = Math.max(...highs);
+  const range = max - min || Math.max(max * 0.01, 1);
+  const paddedMin = min - range * 0.06;
+  const paddedMax = max + range * 0.06;
+  const y = (value: number) => top + ((paddedMax - value) / (paddedMax - paddedMin)) * (priceBottom - top);
+  const maxVolume = Math.max(1, ...visible.map(c => c.volume));
+  const slot = plotWidth / visible.length;
+  const bodyWidth = Math.max(2, Math.min(11, slot * 0.62));
+  const timeLabel = (value: string) => new Date(value).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" });
+  const labelIndexes = [0, Math.floor((visible.length - 1) / 4), Math.floor((visible.length - 1) / 2), Math.floor(3 * (visible.length - 1) / 4), visible.length - 1];
+
+  return <Box sx={{ width: "100%", overflowX: "auto" }}>
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Candlestick stock price chart with volume bars" style={{ display: "block", width: "100%", minWidth: 580, height: "auto" }}>
+      {Array.from({ length: 5 }, (_, i) => {
+        const value = paddedMax - (paddedMax - paddedMin) * i / 4;
+        const yy = y(value);
+        return <g key={i}>
+          <line x1={left} x2={width - right} y1={yy} y2={yy} stroke="currentColor" strokeOpacity="0.12" strokeDasharray="4 5" />
+          <text x={left - 10} y={yy + 4} textAnchor="end" fontSize="12" fill="currentColor" opacity="0.75">{value.toFixed(2)}</text>
+        </g>;
+      })}
+      {visible.map((c, i) => {
+        const x = left + slot * (i + 0.5);
+        const rising = c.close >= c.open;
+        const color = rising ? "#26a69a" : "#ef5350";
+        const topBody = y(Math.max(c.open, c.close));
+        const bodyHeight = Math.max(1.5, Math.abs(y(c.open) - y(c.close)));
+        const volumeHeight = (c.volume / maxVolume) * (volumeBottom - volumeTop);
+        return <g key={c.timestamp}>
+          <line x1={x} x2={x} y1={y(c.high)} y2={y(c.low)} stroke={color} strokeWidth="1.5" />
+          <rect x={x - bodyWidth / 2} y={topBody} width={bodyWidth} height={bodyHeight} rx="0.5" fill={color} />
+          <rect x={x - Math.max(1, bodyWidth / 2)} y={volumeBottom - volumeHeight} width={Math.max(2, bodyWidth)} height={Math.max(1, volumeHeight)} fill={color} opacity="0.65" />
+        </g>;
+      })}
+      <line x1={left} x2={width - right} y1={priceBottom + 10} y2={priceBottom + 10} stroke="currentColor" strokeOpacity="0.2" />
+      <text x={left} y={volumeTop - 7} fontSize="12" fill="currentColor" opacity="0.75">VOLUME</text>
+      {labelIndexes.map((idx, i) => visible[idx] ? <text key={i} x={left + slot * (idx + 0.5)} y={height - 18} textAnchor={i === 0 ? "start" : i === labelIndexes.length - 1 ? "end" : "middle"} fontSize="11" fill="currentColor" opacity="0.75">{timeLabel(visible[idx].timestamp)}</text> : null)}
+    </svg>
   </Box>;
 }
 
