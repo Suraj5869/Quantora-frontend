@@ -146,9 +146,14 @@ export default function MarketsPage() {
       open={Boolean(selected)}
       onClose={() => setSelected(null)}
       fullWidth
-      maxWidth="xl"
-      fullScreen={false}
-      PaperProps={{ sx: { borderRadius: { xs: 0, md: 3 }, backgroundImage: "none", minHeight: { md: "78vh" } } }}
+      maxWidth={false}
+      hideBackdrop
+      sx={{ "& .MuiDialog-container": { alignItems: "stretch", justifyContent: "stretch" } }}
+      PaperProps={{ sx: {
+        position: "fixed", top: { xs: "56px", md: "80px" }, left: 0, right: 0, bottom: 0,
+        m: "0 !important", width: "100%", maxWidth: "none", height: { xs: "calc(100dvh - 56px)", md: "calc(100dvh - 80px)" },
+        maxHeight: "none", borderRadius: 0, backgroundImage: "none", overflow: "hidden",
+      } }}
     >
       {selected && <>
         <DialogTitle sx={{ px: { xs: 2, md: 3 }, pt: 2.5, pb: 1 }}>
@@ -163,25 +168,25 @@ export default function MarketsPage() {
             <IconButton aria-label="Close stock details" onClick={() => setSelected(null)}><CloseOutlined /></IconButton>
           </Stack>
         </DialogTitle>
-        <DialogContent sx={{ px: { xs: 1.5, md: 3 }, pb: 3 }}>
-          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ xs: "stretch", md: "center" }} spacing={2} sx={{ mb: 2 }}>
-            <Stack direction="row" spacing={1} alignItems="center">
+        <DialogContent sx={{ px: { xs: 1.5, md: 3 }, pb: 3, overflowY: "auto", overflowX: "hidden" }}>
+          <Stack direction="column" spacing={1.5} sx={{ mb: 2 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap", rowGap: 1 }}>
               <Tabs value={mode} onChange={(_, v: DataMode) => { setMode(v); void loadCandles(selected, v); }} aria-label="Chart range">
                 <Tab label="Intraday" value="intraday" />
                 <Tab label="Historical" value="historical" />
               </Tabs>
               <Button variant="outlined" size="small" startIcon={<RefreshOutlined />} disabled={loadingCandles} onClick={() => void loadCandles(selected)}>Refresh</Button>
             </Stack>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-              <TextField select size="small" label="Candle unit" value={unit} onChange={(e) => { setUnit(e.target.value); void loadCandles(selected, mode, e.target.value); }} sx={{ minWidth: 130 }}>
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="flex-start">
+              <TextField select size="small" label="Candle unit" value={unit} onChange={(e) => { setUnit(e.target.value); void loadCandles(selected, mode, e.target.value); }} sx={{ width: 150, minWidth: 150 }}>
                 <MenuItem value="minutes">Minutes</MenuItem><MenuItem value="hours">Hours</MenuItem><MenuItem value="days">Days</MenuItem>
               </TextField>
-              <TextField size="small" label="Interval" type="number" value={interval} onChange={(e) => setInterval(Math.max(1, Number(e.target.value) || 1))} inputProps={{ min: 1 }} sx={{ width: 100 }} />
+              <TextField size="small" label="Interval" type="number" value={interval} onChange={(e) => setInterval(Math.max(1, Number(e.target.value) || 1))} inputProps={{ min: 1 }} sx={{ width: 110, minWidth: 110 }} />
               {mode === "historical" && <>
-                <TextField size="small" label="From" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} InputLabelProps={{ shrink: true }} />
-                <TextField size="small" label="To" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} InputLabelProps={{ shrink: true }} />
+                <TextField size="small" label="From date" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ width: 180, minWidth: 165 }} />
+                <TextField size="small" label="To date" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ width: 180, minWidth: 165 }} />
               </>}
-              <Button variant="contained" disabled={loadingCandles} onClick={() => void loadCandles(selected)}>Apply</Button>
+              <Button variant="contained" disabled={loadingCandles} onClick={() => void loadCandles(selected)} sx={{ minHeight: 40, alignSelf: "flex-start" }}>Apply</Button>
             </Stack>
           </Stack>
           {candleError && <Alert severity="error" sx={{ mb: 2 }}>{candleError}</Alert>}
@@ -220,6 +225,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 }
 
 function CandlestickChart({ candles }: { candles: MarketCandle[] }) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const visible = candles.slice(-90);
   const width = 1000;
   const height = 430;
@@ -261,12 +267,40 @@ function CandlestickChart({ candles }: { candles: MarketCandle[] }) {
         const topBody = y(Math.max(c.open, c.close));
         const bodyHeight = Math.max(1.5, Math.abs(y(c.open) - y(c.close)));
         const volumeHeight = (c.volume / maxVolume) * (volumeBottom - volumeTop);
-        return <g key={c.timestamp}>
-          <line x1={x} x2={x} y1={y(c.high)} y2={y(c.low)} stroke={color} strokeWidth="1.5" />
+        const hovered = hoveredIndex === i;
+        return <g key={c.timestamp} onMouseEnter={() => setHoveredIndex(i)} onMouseLeave={() => setHoveredIndex(null)} style={{ cursor: "crosshair" }}>
+          {hovered && <rect x={left + slot * i} y={top} width={slot} height={volumeBottom - top} fill="currentColor" opacity="0.045" />}
+          <line x1={x} x2={x} y1={y(c.high)} y2={y(c.low)} stroke={color} strokeWidth={hovered ? 2.5 : 1.5} />
           <rect x={x - bodyWidth / 2} y={topBody} width={bodyWidth} height={bodyHeight} rx="0.5" fill={color} />
           <rect x={x - Math.max(1, bodyWidth / 2)} y={volumeBottom - volumeHeight} width={Math.max(2, bodyWidth)} height={Math.max(1, volumeHeight)} fill={color} opacity="0.65" />
+          <title>{[
+            timeLabel(c.timestamp),
+            `Open: ${price(c.open)}`,
+            `High: ${price(c.high)}`,
+            `Low: ${price(c.low)}`,
+            `Close: ${price(c.close)}`,
+            `Volume: ${formatNumber(c.volume)}`,
+          ].join("\\n")}</title>
         </g>;
       })}
+      {hoveredIndex !== null && visible[hoveredIndex] && (() => {
+        const c = visible[hoveredIndex];
+        const x = left + slot * (hoveredIndex + 0.5);
+        const boxWidth = 190;
+        const boxHeight = 116;
+        const bx = Math.min(width - right - boxWidth, Math.max(left, x + 12));
+        const by = top + 8;
+        return <g pointerEvents="none">
+          <line x1={x} x2={x} y1={top} y2={volumeBottom} stroke="currentColor" strokeOpacity="0.35" strokeDasharray="3 3" />
+          <rect x={bx} y={by} width={boxWidth} height={boxHeight} rx="6" fill="#171d29" stroke="#64748b" strokeOpacity="0.8" />
+          <text x={bx + 10} y={by + 17} fontSize="10" fill="#e2e8f0">{timeLabel(c.timestamp)}</text>
+          <text x={bx + 10} y={by + 36} fontSize="11" fill="#e2e8f0">Open  {price(c.open)}</text>
+          <text x={bx + 10} y={by + 53} fontSize="11" fill="#e2e8f0">High   {price(c.high)}</text>
+          <text x={bx + 10} y={by + 70} fontSize="11" fill="#e2e8f0">Low     {price(c.low)}</text>
+          <text x={bx + 10} y={by + 87} fontSize="11" fill="#e2e8f0">Close {price(c.close)}</text>
+          <text x={bx + 10} y={by + 104} fontSize="11" fill="#e2e8f0">Volume {formatNumber(c.volume)}</text>
+        </g>;
+      })()}
       <line x1={left} x2={width - right} y1={priceBottom + 10} y2={priceBottom + 10} stroke="currentColor" strokeOpacity="0.2" />
       <text x={left} y={volumeTop - 7} fontSize="12" fill="currentColor" opacity="0.75">VOLUME</text>
       {labelIndexes.map((idx, i) => visible[idx] ? <text key={i} x={left + slot * (idx + 0.5)} y={height - 18} textAnchor={i === 0 ? "start" : i === labelIndexes.length - 1 ? "end" : "middle"} fontSize="11" fill="currentColor" opacity="0.75">{timeLabel(visible[idx].timestamp)}</text> : null)}
