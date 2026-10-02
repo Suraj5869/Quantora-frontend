@@ -1,5 +1,6 @@
 import {
   AccountBalanceOutlined,
+  CheckCircleOutlined,
   LinkOffOutlined,
   LinkOutlined,
 } from "@mui/icons-material";
@@ -14,6 +15,7 @@ import {
   Typography,
 } from "@mui/material";
 import { toast } from "react-hot-toast";
+
 import {
   getApiErrorMessage,
   useBrokerConnection,
@@ -35,6 +37,7 @@ export default function BrokerConnectionCard() {
   const handleConnect = async () => {
     try {
       const result = await connectMutation.mutateAsync();
+
       window.location.assign(result.authorizationUrl);
     } catch (error) {
       toast.error(
@@ -49,18 +52,17 @@ export default function BrokerConnectionCard() {
   const handleDisconnect = async () => {
     try {
       await disconnectMutation.mutateAsync();
+
       toast.success("Upstox has been disconnected.");
-    } catch {
-      toast.error("Unable to disconnect Upstox. Please try again.");
+    } catch (error) {
+      toast.error(
+        getApiErrorMessage(
+          error,
+          "Unable to disconnect Upstox. Please try again.",
+        ),
+      );
     }
   };
-
-  const connectedAt = connection?.connectedAt
-    ? new Intl.DateTimeFormat("en-IN", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }).format(new Date(connection.connectedAt))
-    : null;
 
   return (
     <Card
@@ -87,12 +89,18 @@ export default function BrokerConnectionCard() {
         <AccountBalanceOutlined color="primary" />
 
         <Box sx={{ flex: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: 700 }}
+          >
             Broker Connection
           </Typography>
 
-          <Typography variant="body2" color="text.secondary">
-            Connect Upstox to sync holdings and place trades.
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            Connect your Upstox account to unlock trading features.
           </Typography>
         </Box>
       </Box>
@@ -111,10 +119,23 @@ export default function BrokerConnectionCard() {
         </Box>
       ) : isError || !connection ? (
         <Stack spacing={2}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
             Unable to load your broker connection status.
           </Typography>
-          <Button variant="outlined" onClick={() => refetch()}>
+
+          <Button
+            variant="outlined"
+            onClick={() => refetch()}
+            sx={{
+              width: {
+                xs: "100%",
+                sm: "fit-content",
+              },
+            }}
+          >
             Retry
           </Button>
         </Stack>
@@ -136,37 +157,51 @@ export default function BrokerConnectionCard() {
           <Box>
             <Stack
               direction="row"
-              spacing={1}
               sx={{
                 flexWrap: "wrap",
                 gap: 1,
                 mb: 1,
               }}
             >
-              <Chip size="small" label={connection.broker} variant="outlined" />
               <Chip
                 size="small"
-                color={connection.isConnected ? "success" : "default"}
-                label={connection.isConnected ? "Connected" : "Not connected"}
+                label={connection.broker}
                 variant="outlined"
               />
+
               <Chip
                 size="small"
                 label={connection.environment}
                 variant="outlined"
               />
+
+              <Chip
+                size="small"
+                color={
+                  connection.isConnected
+                    ? "success"
+                    : "default"
+                }
+                icon={
+                  connection.isConnected
+                    ? <CheckCircleOutlined />
+                    : undefined
+                }
+                label={
+                  connection.isConnected
+                    ? "Connected"
+                    : "Not connected"
+                }
+                variant="outlined"
+              />
             </Stack>
 
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              color="text.secondary"
+            >
               {connection.isConnected
-                ? [
-                    connection.brokerUserName
-                      ? `Linked as ${connection.brokerUserName}`
-                      : "Upstox account linked",
-                    connectedAt ? `on ${connectedAt}` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" ")
+                ? "Your Upstox account is connected and ready for Quantora."
                 : "Connect your Upstox account to enable trading features."}
             </Typography>
           </Box>
@@ -177,7 +212,10 @@ export default function BrokerConnectionCard() {
               color="error"
               startIcon={
                 disconnectMutation.isPending ? (
-                  <CircularProgress size={16} color="inherit" />
+                  <CircularProgress
+                    size={16}
+                    color="inherit"
+                  />
                 ) : (
                   <LinkOffOutlined />
                 )
@@ -191,14 +229,19 @@ export default function BrokerConnectionCard() {
                 },
               }}
             >
-              Disconnect
+              {disconnectMutation.isPending
+                ? "Disconnecting..."
+                : "Disconnect"}
             </Button>
           ) : (
             <Button
               variant="contained"
               startIcon={
                 connectMutation.isPending ? (
-                  <CircularProgress size={16} color="inherit" />
+                  <CircularProgress
+                    size={16}
+                    color="inherit"
+                  />
                 ) : (
                   <LinkOutlined />
                 )
@@ -212,7 +255,9 @@ export default function BrokerConnectionCard() {
                 },
               }}
             >
-              {connectMutation.isPending ? "Connecting..." : "Connect Upstox"}
+              {connectMutation.isPending
+                ? "Connecting..."
+                : "Connect Upstox"}
             </Button>
           )}
         </Stack>

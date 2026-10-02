@@ -3,8 +3,6 @@ export interface BrokerConnection {
   isConnected: boolean;
   isSandbox: boolean;
   environment: string;
-  brokerUserName?: string | null;
-  connectedAt?: string | null;
   checkedAt: string;
 }
 

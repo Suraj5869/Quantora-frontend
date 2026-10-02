@@ -531,7 +531,6 @@ export default function ProfilePage() {
         </Box>
       </Card>
 
-      <BrokerConnectionCard />
 
       {/* Trading preferences */}
       <Card

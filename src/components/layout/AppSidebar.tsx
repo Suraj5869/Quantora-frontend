@@ -56,14 +56,19 @@ const navigationItems = [
 
 const tradingItems = [
   {
-    label: "Paper Trading",
-    path: "/paper-trading",
-    icon: <ShowChartOutlined />,
-  },
-  {
     label: "Markets",
     path: "/markets",
     icon: <BarChartOutlined />,
+  },
+  {
+    label: "Brokers",
+    path: "/brokers",
+    icon: <AccountBalanceOutlined />,
+  },
+  {
+    label: "Paper Trading",
+    path: "/paper-trading",
+    icon: <ShowChartOutlined />,
   },
 ];
 
