@@ -1,5 +1,5 @@
 import apiClient from "../../../api/axios";
-import type { MarketCandlesResponse, MarketDiscoveryResponse, MarketInstrument } from "../types/marketData.types";
+import type { MarketCandlesResponse, MarketDiscoveryResponse, MarketInstrument, TechnicalAnalysisResponse } from "../types/marketData.types";
 
 export interface HistoricalCandlesRequest { instrumentKey: string; unit: string; interval: number; fromDate: string; toDate: string; }
 export interface IntradayCandlesRequest { instrumentKey: string; unit: string; interval: number; }
@@ -18,5 +18,13 @@ export async function searchStocks(query: string): Promise<MarketInstrument[]> {
 }
 export async function getMarketDiscovery(): Promise<MarketDiscoveryResponse> {
   const response = await apiClient.get<MarketDiscoveryResponse>("/market-data/discover");
+  return response.data;
+}
+
+export async function getTechnicalAnalysis(request: {
+  instrumentKey: string; unit: string; interval: number; intraday: boolean;
+  fromDate?: string; toDate?: string;
+}): Promise<TechnicalAnalysisResponse> {
+  const response = await apiClient.get<TechnicalAnalysisResponse>("/market-data/analysis", { params: request });
   return response.data;
 }
