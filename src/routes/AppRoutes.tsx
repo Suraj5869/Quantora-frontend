@@ -7,6 +7,7 @@ import DashboardPage from "../pages/dashboard/DashboardPage";
 import AppLayout from "../components/layout/AppLayout";
 import ProfilePage from "../pages/profile/ProfilePage";
 import MarketsPage from "../pages/markets/MarketsPage";
+import ScannerPage from "../pages/scanner/ScannerPage";
 import BrokersPage from "../pages/brokers/BrokersPage";
 
 export default function AppRoutes() {
@@ -26,6 +27,7 @@ export default function AppRoutes() {
             <Route path="/ai-insights" element={<PagePlaceholder title="AI Insights" />} />
             <Route path="/paper-trading" element={<PagePlaceholder title="Paper Trading" />} />
             <Route path="/markets" element={<MarketsPage />} />
+            <Route path="/scanner" element={<ScannerPage />} />
             <Route path="/brokers" element={<BrokersPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<PagePlaceholder title="Settings" />} />
