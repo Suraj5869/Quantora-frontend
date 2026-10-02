@@ -46,7 +46,7 @@ export default function BacktestingPage() {
         <Button variant="contained" onClick={()=>void run()} disabled={loading||!stock} sx={{minHeight:56}}>{loading?<CircularProgress size={22} color="inherit"/>:"Run backtest"}</Button>
       </Box>
       <Stack direction="row" spacing={1} flexWrap="wrap" sx={{mt:2}}><Chip label="SMA 20/50 crossover"/><Chip label="ATR 14 stop (2× ATR)"/><Chip label="Target 2R"/><Chip label="Long-only"/></Stack>
-    </Card>
+    </CardContent></Card>
     {result&&<>
       <Typography variant="h6" fontWeight={750} sx={{mb:1}}>Results · {stock?.tradingSymbol}</Typography>
       <Box sx={{display:"grid",gridTemplateColumns:{xs:"repeat(2,minmax(0,1fr))",lg:"repeat(4,minmax(0,1fr))"},gap:1.5,mb:2}}>
