@@ -6,6 +6,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import DashboardPage from "../pages/dashboard/DashboardPage";
 import AppLayout from "../components/layout/AppLayout";
 import ProfilePage from "../pages/profile/ProfilePage";
+import MarketsPage from "../pages/markets/MarketsPage";
 import BrokersPage from "../pages/brokers/BrokersPage";
 
 export default function AppRoutes() {
@@ -13,54 +14,20 @@ export default function AppRoutes() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
-
         <Route path="/login" element={<Login />} />
-
         <Route path="/register" element={<Register />} />
 
-        {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
-
-            <Route
-              path="/portfolio"
-              element={<PagePlaceholder title="Portfolio" />}
-            />
-
-            <Route
-              path="/watchlist"
-              element={<PagePlaceholder title="Watchlist" />}
-            />
-
-            <Route
-              path="/strategies"
-              element={<PagePlaceholder title="Strategies" />}
-            />
-
-            <Route
-              path="/ai-insights"
-              element={<PagePlaceholder title="AI Insights" />}
-            />
-
-            <Route
-              path="/paper-trading"
-              element={<PagePlaceholder title="Paper Trading" />}
-            />
-
-            <Route
-              path="/markets"
-              element={<PagePlaceholder title="Markets" />}
-            />
-
+            <Route path="/portfolio" element={<PagePlaceholder title="Portfolio" />} />
+            <Route path="/watchlist" element={<PagePlaceholder title="Watchlist" />} />
+            <Route path="/strategies" element={<PagePlaceholder title="Strategies" />} />
+            <Route path="/ai-insights" element={<PagePlaceholder title="AI Insights" />} />
+            <Route path="/paper-trading" element={<PagePlaceholder title="Paper Trading" />} />
+            <Route path="/markets" element={<MarketsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
-
-            <Route path="/brokers" element={<BrokersPage />} />
-
-            <Route
-              path="/settings"
-              element={<PagePlaceholder title="Settings" />}
-            />
+            <Route path="/settings" element={<PagePlaceholder title="Settings" />} />
           </Route>
         </Route>
 
@@ -71,9 +38,5 @@ export default function AppRoutes() {
 }
 
 function PagePlaceholder({ title }: { title: string }) {
-  return (
-    <div>
-      <h1>{title}</h1>
-    </div>
-  );
+  return <div><h1>{title}</h1></div>;
 }
