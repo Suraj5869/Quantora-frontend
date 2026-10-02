@@ -9,6 +9,7 @@ import {
   PersonOutlined,
   SettingsOutlined,
   ShowChartOutlined,
+  RadarOutlined,
   StarBorderOutlined,
 } from "@mui/icons-material";
 import {
@@ -59,6 +60,11 @@ const tradingItems = [
     label: "Markets",
     path: "/markets",
     icon: <BarChartOutlined />,
+  },
+  {
+    label: "Stock Scanner",
+    path: "/scanner",
+    icon: <RadarOutlined />,
   },
   {
     label: "Brokers",
