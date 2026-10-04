@@ -124,6 +124,7 @@ export default function PaperTradingPage() {
     <Alert severity="info" sx={{ mb: 2 }}>Simulation only. Orders are filled immediately at the latest available intraday candle close, not at a guaranteed live execution price. No real orders are sent to Upstox.</Alert>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>{error}</Alert>}
     {message && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setMessage("")}>{message}</Alert>}
+    {simulationMessage && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setSimulationMessage("")}>{simulationMessage} This was a dry run; no order was placed and no position was changed.</Alert>}
     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2,minmax(0,1fr))", lg: "repeat(4,minmax(0,1fr))" }, gap: 1.5, mb: 2 }}>
       <Summary title="Virtual cash" value={money(account?.availableCash ?? 0)} />
       <Summary title="Invested value" value={money(account?.investedValue ?? 0)} />
