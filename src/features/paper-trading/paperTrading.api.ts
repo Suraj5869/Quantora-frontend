@@ -46,3 +46,24 @@ export interface StopMonitorResult {
 export async function monitorPaperStops() {
   return (await apiClient.post<StopMonitorResult>("/paper-trading/monitor-stops")).data;
 }
+
+
+export interface PaperAutomationRunItem {
+  tradingSymbol: string;
+  instrumentKey: string;
+  status: string;
+  detail: string;
+  executionPrice: number | null;
+  stopLossPrice: number | null;
+}
+export interface PaperAutomationRunResult {
+  runAt: string;
+  instrumentsReviewed: number;
+  ordersFilled: number;
+  noSetupCount: number;
+  results: PaperAutomationRunItem[];
+  message: string;
+}
+export async function runPaperAutomation() {
+  return (await apiClient.post<PaperAutomationRunResult>("/paper-trading/automation/run")).data;
+}
