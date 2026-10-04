@@ -27,6 +27,17 @@ export async function searchPaperInstruments(query: string) {
   return (await apiClient.get<MarketInstrument[]>("/market-data/search", { params: { query } })).data;
 }
 
+export interface StopLossSimulationResult {
+  instrumentKey: string;
+  tradingSymbol: string;
+  stopLossPrice: number | null;
+  simulatedPrice: number;
+  wouldTrigger: boolean;
+  message: string;
+}
+export async function simulatePaperStop(instrumentKey: string, simulatedPrice: number) {
+  return (await apiClient.post<StopLossSimulationResult>("/paper-trading/simulate-stop", { instrumentKey, simulatedPrice })).data;
+}
 export interface StopMonitorResult {
   checkedAt: string;
   triggeredCount: number;
