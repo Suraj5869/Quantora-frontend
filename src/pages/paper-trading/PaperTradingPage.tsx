@@ -9,7 +9,7 @@ import RestartAltOutlined from "@mui/icons-material/RestartAltOutlined";
 import TrendingUpOutlined from "@mui/icons-material/TrendingUpOutlined";
 import ShieldOutlined from "@mui/icons-material/ShieldOutlined";
 import apiClient from "../../api/axios";
-import { getPaperAccount, monitorPaperStops, placePaperOrder, resetPaperAccount, searchPaperInstruments, simulatePaperStop, runPaperAutomation, type PaperAccount, type PaperAutomationRunResult } from "../../features/paper-trading/paperTrading.api";
+import { getPaperAccount, placePaperOrder, resetPaperAccount, searchPaperInstruments, simulatePaperStop, runPaperAutomation, type PaperAccount, type PaperAutomationRunResult } from "../../features/paper-trading/paperTrading.api";
 import type { MarketInstrument } from "../../features/market-data/types/marketData.types";
 
 const money = (v: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(v);
@@ -39,28 +39,6 @@ export default function PaperTradingPage() {
 
   const refresh = async () => { setLoading(true); try { setAccount(await getPaperAccount()); setError(""); } catch { setError("Unable to load paper account. Check the backend and database migration."); } finally { setLoading(false); } };
   useEffect(() => { void refresh(); }, []);
-  useEffect(() => {
-    let active = true;
-    let checking = false;
-    const checkStops = async () => {
-      if (checking) return;
-      checking = true;
-      try {
-        const result = await monitorPaperStops();
-        if (!active || result.triggeredCount === 0) return;
-        const symbols = result.closedOrders.map(order => order.tradingSymbol).join(", ");
-        setMessage(`Protective stop-loss triggered for ${symbols}. Positions were closed in paper trading only.`);
-        setAccount(await getPaperAccount());
-      } catch {
-        // Monitoring is best-effort while this page is open; do not imply a stop was checked successfully.
-      } finally {
-        checking = false;
-      }
-    };
-    void checkStops();
-    const timer = window.setInterval(() => { void checkStops(); }, 30000);
-    return () => { active = false; window.clearInterval(timer); };
-  }, []);
   useEffect(() => {
     let active = true;
     const timer = window.setTimeout(async () => {
