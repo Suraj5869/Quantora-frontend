@@ -32,6 +32,8 @@ export default function PaperTradingPage() {
   const [riskPreview, setRiskPreview] = useState<RiskPreview | null>(null);
   const [riskLoading, setRiskLoading] = useState(false);
   const [riskError, setRiskError] = useState("");
+  const [simulationMessage, setSimulationMessage] = useState("");
+  const [simulationBusy, setSimulationBusy] = useState<string | null>(null);
 
   const refresh = async () => { setLoading(true); try { setAccount(await getPaperAccount()); setError(""); } catch { setError("Unable to load paper account. Check the backend and database migration."); } finally { setLoading(false); } };
   useEffect(() => { void refresh(); }, []);
