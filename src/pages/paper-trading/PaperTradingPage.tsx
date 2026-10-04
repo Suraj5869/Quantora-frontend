@@ -9,7 +9,7 @@ import RestartAltOutlined from "@mui/icons-material/RestartAltOutlined";
 import TrendingUpOutlined from "@mui/icons-material/TrendingUpOutlined";
 import ShieldOutlined from "@mui/icons-material/ShieldOutlined";
 import apiClient from "../../api/axios";
-import { getPaperAccount, monitorPaperStops, placePaperOrder, resetPaperAccount, searchPaperInstruments, type PaperAccount } from "../../features/paper-trading/paperTrading.api";
+import { getPaperAccount, monitorPaperStops, placePaperOrder, resetPaperAccount, searchPaperInstruments, simulatePaperStop, type PaperAccount } from "../../features/paper-trading/paperTrading.api";
 import type { MarketInstrument } from "../../features/market-data/types/marketData.types";
 
 const money = (v: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(v);
