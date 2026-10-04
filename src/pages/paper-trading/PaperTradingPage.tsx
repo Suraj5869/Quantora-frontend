@@ -69,6 +69,19 @@ export default function PaperTradingPage() {
     return () => { active = false; window.clearTimeout(timer); };
   }, [query]);
 
+  const testStop = async (instrumentKey: string, simulatedPrice: number) => {
+    setSimulationBusy(`${instrumentKey}:${simulatedPrice}`);
+    setSimulationMessage("");
+    try {
+      const result = await simulatePaperStop(instrumentKey, simulatedPrice);
+      setSimulationMessage(`${result.tradingSymbol} at ${money(result.simulatedPrice)}: ${result.message}`);
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? e?.response?.data?.title ?? "Unable to simulate stop-loss logic.");
+    } finally {
+      setSimulationBusy(null);
+    }
+  };
+
   const previewRisk = async () => {
     if (!instrument) { setRiskError("Search and select a stock first."); return; }
     setRiskLoading(true); setRiskError(""); setRiskPreview(null);
