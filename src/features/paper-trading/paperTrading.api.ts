@@ -26,3 +26,12 @@ export async function resetPaperAccount() {
 export async function searchPaperInstruments(query: string) {
   return (await apiClient.get<MarketInstrument[]>("/market-data/search", { params: { query } })).data;
 }
+
+export interface StopMonitorResult {
+  checkedAt: string;
+  triggeredCount: number;
+  closedOrders: PaperOrder[];
+}
+export async function monitorPaperStops() {
+  return (await apiClient.post<StopMonitorResult>("/paper-trading/monitor-stops")).data;
+}
