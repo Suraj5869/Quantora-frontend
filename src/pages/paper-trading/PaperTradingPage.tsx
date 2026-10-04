@@ -9,7 +9,7 @@ import RestartAltOutlined from "@mui/icons-material/RestartAltOutlined";
 import TrendingUpOutlined from "@mui/icons-material/TrendingUpOutlined";
 import ShieldOutlined from "@mui/icons-material/ShieldOutlined";
 import apiClient from "../../api/axios";
-import { getPaperAccount, monitorPaperStops, placePaperOrder, resetPaperAccount, searchPaperInstruments, simulatePaperStop, type PaperAccount } from "../../features/paper-trading/paperTrading.api";
+import { getPaperAccount, monitorPaperStops, placePaperOrder, resetPaperAccount, searchPaperInstruments, simulatePaperStop, runPaperAutomation, type PaperAccount, type PaperAutomationRunResult } from "../../features/paper-trading/paperTrading.api";
 import type { MarketInstrument } from "../../features/market-data/types/marketData.types";
 
 const money = (v: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(v);
@@ -33,7 +33,7 @@ export default function PaperTradingPage() {
   const [riskLoading, setRiskLoading] = useState(false);
   const [riskError, setRiskError] = useState("");
   const [simulationMessage, setSimulationMessage] = useState("");
-  const [simulationBusy, setSimulationBusy] = useState<string | null>(null);
+  const [simulationBusy, setSimulationBusy] = useState<string | null>(null);\n  const [automationBusy, setAutomationBusy] = useState(false);\n  const [automationResult, setAutomationResult] = useState<PaperAutomationRunResult | null>(null);
 
   const refresh = async () => { setLoading(true); try { setAccount(await getPaperAccount()); setError(""); } catch { setError("Unable to load paper account. Check the backend and database migration."); } finally { setLoading(false); } };
   useEffect(() => { void refresh(); }, []);
@@ -94,7 +94,7 @@ export default function PaperTradingPage() {
     finally { setRiskLoading(false); }
   };
 
-  const submitOrder = async () => {
+  const runAutomation = async () => {\n    setAutomationBusy(true); setError(""); setMessage(""); setAutomationResult(null);\n    try {\n      const result = await runPaperAutomation();\n      setAutomationResult(result);\n      setMessage(`Automatic paper scan completed: ${result.ordersFilled} new paper position(s) opened across ${result.instrumentsReviewed} reviewed instruments.`);\n      await refresh();\n    } catch (e: any) {\n      setError(e?.response?.data?.message ?? e?.response?.data?.title ?? "Automatic paper scan failed. Confirm Upstox market data is available.");\n    } finally { setAutomationBusy(false); }\n  };\n\n  const submitOrder = async () => {
     if (!instrument) { setError("Search and select a stock first."); return; }
     const qty = Number(quantity);
     if (!Number.isFinite(qty) || qty <= 0) { setError("Enter a valid quantity greater than zero."); return; }
@@ -121,7 +121,7 @@ export default function PaperTradingPage() {
       <Box><Stack direction="row" spacing={1} alignItems="center"><AccountBalanceWalletOutlined color="primary" /><Typography variant="h4" fontWeight={800}>Paper Trading</Typography></Stack><Typography color="text.secondary" sx={{ mt: .5 }}>Practice with virtual money using available Upstox market prices.</Typography></Box>
       <Button color="warning" variant="outlined" startIcon={<RestartAltOutlined />} onClick={() => setResetOpen(true)}>Reset account</Button>
     </Stack>
-    <Alert severity="info" sx={{ mb: 2 }}>Simulation only. Orders are filled immediately at the latest available intraday candle close, not at a guaranteed live execution price. No real orders are sent to Upstox.</Alert>
+    <Alert severity="info" sx={{ mb: 2 }}>Simulation only. Orders are filled immediately at the latest available intraday candle close, not at a guaranteed live execution price. No real orders are sent to Upstox.</Alert>\n    <Card variant="outlined" sx={{ mb: 2 }}><CardContent>\n      <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "stretch", sm: "center" }} justifyContent="space-between" spacing={2}>\n        <Box sx={{ minWidth: 0 }}><Typography variant="h6" fontWeight={750}>Automatic paper trading</Typography><Typography color="text.secondary" variant="body2" sx={{ mt: .5 }}>Scan the configured featured-stock universe and paper-buy qualifying bullish setups. Uses a 2× ATR stop, a maximum 1% planned risk per trade, and up to 3 new positions per run.</Typography></Box>\n        <Button variant="contained" onClick={() => void runAutomation()} disabled={automationBusy || placing} sx={{ flexShrink: 0 }}>{automationBusy ? <><CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />Scanning…</> : "Run automatic scan"}</Button>\n      </Stack>\n      <Alert severity="warning" sx={{ mt: 2 }}>Manual run only: this does not run in the background. The current universe is the configured featured-stock list (20 stocks), not the complete Nifty 50. Paper trades only; no real broker orders are sent.</Alert>\n      {automationResult && <Box sx={{ mt: 2 }}>\n        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{automationResult.message}</Typography>\n        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2,minmax(0,1fr))", sm: "repeat(3,minmax(0,1fr))" }, gap: 1.5, mb: 2 }}>\n          <Summary title="Reviewed" value={String(automationResult.instrumentsReviewed)} />\n          <Summary title="Paper buys filled" value={String(automationResult.ordersFilled)} />\n          <Summary title="No setup" value={String(automationResult.noSetupCount)} />\n        </Box>\n        <TableContainer sx={{ overflowX: "auto" }}><Table size="small"><TableHead><TableRow>{["Stock", "Result", "Entry", "Stop loss", "Details"].map(x => <TableCell key={x} sx={{ whiteSpace: "nowrap", fontWeight: 700 }}>{x}</TableCell>)}</TableRow></TableHead><TableBody>{automationResult.results.map((item, index) => <TableRow key={`${item.instrumentKey}-${index}`}><TableCell>{item.tradingSymbol}</TableCell><TableCell><Chip size="small" color={item.status === "Paper order filled" ? "success" : item.status === "Unavailable" || item.status === "Rejected" ? "error" : "default"} label={item.status} /></TableCell><TableCell>{item.executionPrice == null ? "—" : money(item.executionPrice)}</TableCell><TableCell>{item.stopLossPrice == null ? "—" : money(item.stopLossPrice)}</TableCell><TableCell sx={{ minWidth: 240 }}>{item.detail}</TableCell></TableRow>)}</TableBody></Table></TableContainer>\n      </Box>}\n    </CardContent></Card>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>{error}</Alert>}
     {message && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setMessage("")}>{message}</Alert>}
     {simulationMessage && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setSimulationMessage("")}>{simulationMessage} This was a dry run; no order was placed and no position was changed.</Alert>}
