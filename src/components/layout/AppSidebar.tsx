@@ -12,6 +12,7 @@ import {
   RadarOutlined,
   ScienceOutlined,
   StarBorderOutlined,
+  NewspaperOutlined,
 } from "@mui/icons-material";
 import {
   Box,
