@@ -46,6 +46,11 @@ const navigationItems = [
     icon: <StarBorderOutlined />,
   },
   {
+    label: "News",
+    path: "/news",
+    icon: <NewspaperOutlined />,
+  },
+  {
     label: "Strategies",
     path: "/strategies",
     icon: <AutoGraphOutlined />,
