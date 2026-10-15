@@ -28,7 +28,6 @@ import { useAuthStore } from "../../store/auth.store";
 import { toast } from "react-hot-toast";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import BrokerConnectionCard from "./components/BrokerConnectionCard";
 import { BROKER_CONNECTION_QUERY_KEY } from "../../features/broker/hooks/useBroker";
 
 const profileSchema = z.object({
@@ -394,17 +393,15 @@ export default function ProfilePage() {
                   helperText={
                     errors.fullName?.message
                   }
-                  slotProps={{
-                    input: {
-                      startAdornment: (
-                        <PersonOutlined
-                          sx={{
-                            mr: 1,
-                            color: "text.secondary",
-                          }}
-                        />
-                      ),
-                    },
+                  InputProps={{
+                    startAdornment: (
+                      <PersonOutlined
+                        sx={{
+                          mr: 1,
+                          color: "text.secondary",
+                        }}
+                      />
+                    ),
                   }}
                 />
               )}
@@ -415,17 +412,15 @@ export default function ProfilePage() {
               label="Email Address"
               value={profile.email}
               disabled
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <EmailOutlined
-                      sx={{
-                        mr: 1,
-                        color: "text.secondary",
-                      }}
-                    />
-                  ),
-                },
+              InputProps={{
+                startAdornment: (
+                  <EmailOutlined
+                    sx={{
+                      mr: 1,
+                      color: "text.secondary",
+                    }}
+                  />
+                ),
               }}
               helperText="Email address cannot be changed here."
             />
@@ -445,17 +440,15 @@ export default function ProfilePage() {
                 label="Member Since"
                 value={memberSince}
                 disabled
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <CalendarMonthOutlined
-                        sx={{
-                          mr: 1,
-                          color: "text.secondary",
-                        }}
-                      />
-                    ),
-                  },
+                InputProps={{
+                  startAdornment: (
+                    <CalendarMonthOutlined
+                      sx={{
+                        mr: 1,
+                        color: "text.secondary",
+                      }}
+                    />
+                  ),
                 }}
               />
 
@@ -476,17 +469,15 @@ export default function ProfilePage() {
                     : "Not available"
                 }
                 disabled
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <AccountCircleOutlined
-                        sx={{
-                          mr: 1,
-                          color: "text.secondary",
-                        }}
-                      />
-                    ),
-                  },
+                InputProps={{
+                  startAdornment: (
+                    <AccountCircleOutlined
+                      sx={{
+                        mr: 1,
+                        color: "text.secondary",
+                      }}
+                    />
+                  ),
                 }}
               />
             </Box>

@@ -26,7 +26,9 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         >
           {/* Branding */}
           <Grid
-            size={{ xs: 12, md: 6 }}
+            item
+            xs={12}
+            md={6}
             sx={{
               display: {
                 xs: "none",
@@ -143,7 +145,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           </Grid>
 
           {/* Form */}
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid item xs={12} md={6}>
             <Paper
               elevation={0}
               sx={{

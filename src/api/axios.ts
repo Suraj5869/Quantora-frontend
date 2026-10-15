@@ -1,6 +1,4 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
-
-import { authApi } from "./auth.api";
 import { tokenStorage } from "../utils/storage";
 import { useAuthStore } from "../store/auth.store";
 import { refreshAccessToken } from "./auth-refresh";

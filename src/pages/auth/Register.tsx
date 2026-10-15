@@ -156,11 +156,7 @@ export default function Register() {
           )}
           required
           fullWidth
-          slotProps={{
-            inputLabel: {
-              shrink: true,
-            },
-          }}
+          InputLabelProps={{ shrink: true }}
         />
 
         <TextField
@@ -175,27 +171,25 @@ export default function Register() {
           required
           fullWidth
           autoComplete="new-password"
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={() =>
-                      setShowPassword(
-                        (value) => !value,
-                      )
-                    }
-                    edge="end"
-                  >
-                    {showPassword ? (
-                      <VisibilityOff />
-                    ) : (
-                      <Visibility />
-                    )}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            },
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={() =>
+                    setShowPassword(
+                      (value) => !value,
+                    )
+                  }
+                  edge="end"
+                >
+                  {showPassword ? (
+                    <VisibilityOff />
+                  ) : (
+                    <Visibility />
+                  )}
+                </IconButton>
+              </InputAdornment>
+            ),
           }}
         />
 

@@ -54,7 +54,7 @@ export default function DashboardPage() {
 </Box>
       {/* Statistics */}
       <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+        <Grid item xs={12} sm={6} lg={3}>
           <DashboardStatCard
             title="Portfolio Value"
             value="₹0.00"
@@ -63,7 +63,7 @@ export default function DashboardPage() {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+        <Grid item xs={12} sm={6} lg={3}>
           <DashboardStatCard
             title="Today's P&L"
             value="₹0.00"
@@ -72,7 +72,7 @@ export default function DashboardPage() {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+        <Grid item xs={12} sm={6} lg={3}>
           <DashboardStatCard
             title="Active Strategies"
             value="0"
@@ -81,7 +81,7 @@ export default function DashboardPage() {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+        <Grid item xs={12} sm={6} lg={3}>
           <DashboardStatCard
             title="Paper Trading"
             value="Inactive"

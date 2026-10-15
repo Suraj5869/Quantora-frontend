@@ -6,7 +6,6 @@ import {
   InsightsOutlined,
   LogoutOutlined,
   Person4Outlined,
-  PersonOutlined,
   SettingsOutlined,
   ShowChartOutlined,
   RadarOutlined,
@@ -183,15 +182,13 @@ export default function AppSidebar({
         <ListItemIcon>{item.icon}</ListItemIcon>
 
         <ListItemText
-          primary={item.label}
-          slotProps={{
-            primary: {
-              sx:{
-              fontSize: 14,
-              }
-            },
-          }}
-        />
+  primary={item.label}
+  primaryTypographyProps={{
+    sx: {
+      fontSize: 14,
+    },
+  }}
+/>
       </ListItemButton>
     );
   };
@@ -304,12 +301,10 @@ export default function AppSidebar({
 
             <ListItemText
               primary="Logout"
-              slotProps={{
-                primary: {
-                  sx: {
+              primaryTypographyProps={{
+                sx: {
                   fontSize: 14,
-                  }
-                },
+                }
               }}
             />
           </ListItemButton>
